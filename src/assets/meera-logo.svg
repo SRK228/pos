@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100">
+  <rect x="20" y="20" width="60" height="60" fill="none" stroke="#B83280" stroke-width="2" />
+  <circle cx="40" cy="40" r="10" fill="#F687B3" />
+  <circle cx="55" cy="55" r="15" fill="#B83280" />
+  <path d="M100 30 L110 30 L120 70 L130 30 L140 30 L150 70 L160 30 L170 30 L155 80 L145 80 L135 40 L125 80 L115 80 Z" fill="#B83280" />
+  <path d="M175 30 L185 30 L185 50 L205 50 L205 30 L215 30 L215 80 L205 80 L205 60 L185 60 L185 80 L175 80 Z" fill="#B83280" />
+  <path d="M225 30 L235 30 L235 50 L255 50 L255 30 L265 30 L265 80 L255 80 L255 60 L235 60 L235 80 L225 80 Z" fill="#B83280" />
+  <path d="M275 30 L285 30 L285 80 L275 80 Z" fill="#B83280" />
+  <rect x="100" y="85" width="185" height="10" fill="#B83280" />
+  <text x="145" y="93" font-family="Arial" font-size="6" fill="white">MATERNITY • FERTILITY</text>
+  <text x="145" y="99" font-family="Arial" font-size="4" fill="white">Joy of Motherhood!</text>
+</svg>
