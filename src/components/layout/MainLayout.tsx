@@ -74,7 +74,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             <MeeraLogo className="h-8 mr-2" />
           )}
           <span className="text-xl font-bold text-primary">
-            {currentTenant?.name || "YA POS System"}
+            {currentTenant?.name || "Meera POS System"}
           </span>
         </div>
         <div className="w-10"></div> {/* Empty div for balance */}

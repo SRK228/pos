@@ -57,7 +57,7 @@ export function Sidebar({ onNavItemClick }: SidebarProps) {
   const routes = [
     {
       label: "Dashboard",
-      href: "/",
+      href: "/dashboard",
       icon: <LayoutDashboard className="h-5 w-5" />,
     },
     {

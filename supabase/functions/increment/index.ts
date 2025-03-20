@@ -20,11 +20,11 @@ serve(async (req) => {
     ) as string;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { domain, slug } = await req.json();
+    const { row_id, amount } = await req.json();
 
-    if (!domain && !slug) {
+    if (!row_id || amount === undefined) {
       return new Response(
-        JSON.stringify({ error: "Either domain or slug is required" }),
+        JSON.stringify({ error: "row_id and amount are required" }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 400,
@@ -32,48 +32,43 @@ serve(async (req) => {
       );
     }
 
-    let query = supabase.from("tenants").select("*");
+    // Get current stock
+    const { data: product, error: getError } = await supabase
+      .from("products")
+      .select("current_stock")
+      .eq("id", row_id)
+      .single();
 
-    if (domain) {
-      query = query.eq("domain", domain);
-    } else if (slug) {
-      query = query.eq("slug", slug);
+    if (getError) {
+      return new Response(JSON.stringify({ error: "Product not found" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 404,
+      });
     }
 
-    const { data: tenant, error } = await query.eq("is_active", true).single();
+    // Calculate new stock value
+    const newStock = product.current_stock + amount;
+
+    // Update product stock
+    const { data, error } = await supabase
+      .from("products")
+      .update({ current_stock: newStock })
+      .eq("id", row_id)
+      .select()
+      .single();
 
     if (error) {
-      console.error("Error fetching tenant:", error);
-      return new Response(
-        JSON.stringify({ error: "Tenant not found or inactive" }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 404,
-        },
-      );
-    }
-
-    // Get stores for this tenant
-    const { data: stores, error: storesError } = await supabase
-      .from("stores")
-      .select("*")
-      .eq("tenant_id", tenant.id)
-      .eq("is_active", true);
-
-    if (storesError) {
-      console.error("Error fetching stores:", storesError);
-      return new Response(JSON.stringify({ error: "Error fetching stores" }), {
+      return new Response(JSON.stringify({ error: "Failed to update stock" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
       });
     }
 
-    return new Response(JSON.stringify({ tenant, stores }), {
+    return new Response(JSON.stringify({ success: true, data }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (err) {
-    console.error("Error in tenant-resolver:", err);
     return new Response(JSON.stringify({ error: err.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,

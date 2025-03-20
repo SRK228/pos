@@ -81,7 +81,13 @@
 .bg-gradient-meera {
   background: linear-gradient(
     to right,
-    var(--gradient-start),
-    var(--gradient-end)
+    hsl(var(--gradient-start)),
+    hsl(var(--gradient-end))
   );
+}
+
+/* Fix for button visibility */
+button,
+a {
+  @apply transition-colors duration-200;
 }

@@ -1,82 +1,79 @@
-import React, { Suspense, lazy } from "react";
-import { useRoutes, Routes, Route, Navigate } from "react-router-dom";
-import { MainLayout } from "./components/layout/MainLayout";
+import React, { Suspense } from "react";
+import { Routes, Route, Navigate, useRoutes } from "react-router-dom";
 import { TenantProvider } from "./contexts/TenantContext";
 import { AuthProvider } from "./contexts/AuthContext";
+import { LoadingSpinner } from "./components/ui/loading-spinner";
+import { Toaster } from "./components/ui/toaster";
 
-// Lazy load components for better performance
-const Dashboard = lazy(() => import("./components/dashboard/Dashboard"));
-const POSLayout = lazy(() => import("./components/pos/POSLayout"));
-const InventoryDashboard = lazy(
-  () => import("./components/inventory/InventoryDashboard"),
-);
-const ItemGroups = lazy(() => import("./components/inventory/ItemGroups"));
-const InventoryAdjustment = lazy(
-  () => import("./components/inventory/InventoryAdjustment"),
-);
-const SettingsPage = lazy(() => import("./components/settings/SettingsPage"));
-const BillingPage = lazy(() => import("./components/billing/BillingPage"));
-const SalesPage = lazy(() => import("./components/sales/SalesPage"));
-const OrderForm = lazy(() => import("./components/sales/OrderForm"));
-const ReportsPage = lazy(() => import("./components/reports/ReportsPage"));
-const StaffPage = lazy(() => import("./components/staff/StaffPage"));
-const OnboardingPage = lazy(
-  () => import("./components/onboarding/OnboardingPage"),
-);
-const LoginPage = lazy(() => import("./components/auth/LoginPage"));
-const RegisterPage = lazy(() => import("./components/auth/RegisterPage"));
-const ForgotPasswordPage = lazy(
-  () => import("./components/auth/ForgotPasswordPage"),
-);
-const ResetPasswordPage = lazy(
-  () => import("./components/auth/ResetPasswordPage"),
-);
+// Import pages
+import LandingPage from "./components/landing/LandingPage";
+import LoginPage from "./components/auth/LoginPage";
+import RegisterPage from "./components/auth/RegisterPage";
+import ForgotPasswordPage from "./components/auth/ForgotPasswordPage";
+import ResetPasswordPage from "./components/auth/ResetPasswordPage";
+import OnboardingPage from "./components/onboarding/OnboardingPage";
+import Dashboard from "./components/dashboard/Dashboard";
+import POSLayout from "./components/pos/POSLayout";
+import InventoryDashboard from "./components/inventory/InventoryDashboard";
+import ItemGroups from "./components/inventory/ItemGroups";
+import InventoryAdjustment from "./components/inventory/InventoryAdjustment";
+import BillingPage from "./components/billing/BillingPage";
+import SalesPage from "./components/sales/SalesPage";
+import OrderForm from "./components/sales/OrderForm";
+import ReportsPage from "./components/reports/ReportsPage";
+import StaffPage from "./components/staff/StaffPage";
+import SettingsPage from "./components/settings/SettingsPage";
+import { MainLayout } from "./components/layout/MainLayout";
 
+// Import routes for Tempo
 import routes from "tempo-routes";
 
-// Loading spinner component
-const LoadingSpinner = () => (
-  <div className="min-h-screen flex flex-col items-center justify-center bg-pink-50 gap-4">
-    <svg
-      className="animate-spin h-10 w-10 text-primary"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      ></circle>
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-      ></path>
-    </svg>
-    <p className="text-xl font-bold text-primary">
-      Loading Meera POS System...
-    </p>
-  </div>
-);
+// Import hooks
+import { useAuth } from "./contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  // This would normally check auth state, but we'll implement that later
-  return <>{children}</>;
+  const { isAuthenticated, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate("/login");
+    }
+  }, [isAuthenticated, isLoading, navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  return isAuthenticated ? <>{children}</> : null;
 };
 
 function App() {
   return (
-    <TenantProvider>
-      <AuthProvider>
+    <AuthProvider>
+      <TenantProvider>
         <Suspense fallback={<LoadingSpinner />}>
           <div className="min-h-screen bg-background">
+            <Toaster />
             {import.meta.env.VITE_TEMPO === "true" && useRoutes(routes)}
             <Routes>
+              {/* Landing Page */}
+              <Route
+                path="/"
+                element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <LandingPage />
+                  </Suspense>
+                }
+              />
+
               {/* Auth routes */}
               <Route
                 path="/login"
@@ -113,15 +110,15 @@ function App() {
               <Route
                 path="/onboarding"
                 element={
-                  <Suspense fallback={<LoadingSpinner />}>
+                  <ProtectedRoute>
                     <OnboardingPage />
-                  </Suspense>
+                  </ProtectedRoute>
                 }
               />
 
               {/* Protected routes */}
               <Route
-                path="/"
+                path="/dashboard"
                 element={
                   <ProtectedRoute>
                     <MainLayout>
@@ -252,8 +249,8 @@ function App() {
             </Routes>
           </div>
         </Suspense>
-      </AuthProvider>
-    </TenantProvider>
+      </TenantProvider>
+    </AuthProvider>
   );
 }
 

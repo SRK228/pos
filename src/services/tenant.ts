@@ -43,14 +43,19 @@ export const tenantApi = {
     slug?: string,
   ): Promise<{ tenant: Tenant; stores: Store[] }> => {
     try {
+      console.log("Resolving tenant with domain:", domain, "slug:", slug);
       const { data, error } = await supabase.functions.invoke(
-        "supabase-functions-tenant-resolver",
+        "tenant-resolver",
         {
           body: { domain, slug },
         },
       );
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error invoking tenant-resolver:", error);
+        throw error;
+      }
+
       return data;
     } catch (error) {
       console.error("Error resolving tenant:", error);
