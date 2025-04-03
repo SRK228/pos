@@ -36,14 +36,15 @@ const RegisterPage = () => {
   }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log("Starting registration process");
     e.preventDefault();
     setErrorMessage("");
     setRegistrationSuccess(false); // Reset registration success state
 
     // Enhanced validation
     if (!fullName.trim()) {
-      setErrorMessage("Full name is required");
-      return;
+      // Instead of showing error, set a default name from email
+      setFullName(email.split("@")[0] || "");
     }
 
     if (!email.trim()) {
@@ -86,12 +87,14 @@ const RegisterPage = () => {
       setIsLoading(true);
 
       // Create user account
+      console.log("Calling signUp with", { email, fullName });
       await signUp(email, password, {
         full_name: fullName,
         email,
         role: "admin", // First user is admin for their organization
         is_active: true, // Explicitly set is_active to true
       });
+      console.log("signUp completed successfully");
 
       // Show success message
       setRegistrationSuccess(true);
@@ -99,6 +102,9 @@ const RegisterPage = () => {
         title: "Registration successful",
         description: "Your account has been created successfully.",
       });
+
+      // Add a small delay to ensure database operations complete
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Try to sign in directly after registration to avoid email verification
       try {

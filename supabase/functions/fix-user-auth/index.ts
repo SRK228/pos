@@ -80,7 +80,9 @@ serve(async (req) => {
           email: existingUser.user.email,
           full_name:
             existingUser.user.user_metadata?.full_name ||
-            existingUser.user.email,
+            (existingUser.user.email
+              ? existingUser.user.email.split("@")[0]
+              : null),
           role: existingUser.user.user_metadata?.role || "user",
           tenant_id: existingUser.user.user_metadata?.tenant_id,
           store_id: existingUser.user.user_metadata?.store_id,

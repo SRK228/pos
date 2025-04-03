@@ -1,29 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useNavigate } from "react-router-dom";
-import { authApi, UserProfile } from "@/services/auth";
+import { authApi } from "@/services/auth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
-interface AuthContextType {
-  user: UserProfile | null;
-  isLoading: boolean;
-  error: string | null;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (
-    email: string,
-    password: string,
-    userData: Partial<UserProfile>,
-    tenantData?: any,
-    storeData?: any,
-  ) => Promise<void>;
-  signOut: () => Promise<void>;
-  updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
-  updatePassword: (password: string) => Promise<void>;
-  isAuthenticated: boolean;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -33,10 +14,10 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<UserProfile | null>(null);
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
 
@@ -66,7 +47,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               console.log("User has no tenant_id, redirecting to onboarding");
               navigate("/onboarding");
             }
-          } catch (profileErr: any) {
+          } catch (profileErr) {
             console.error("Error loading user profile:", profileErr);
             // Try to fix the user profile
             try {
@@ -103,7 +84,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             navigate("/login");
           }
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error("Error initializing auth:", err);
         setError(err.message);
         setIsAuthenticated(false);
@@ -134,7 +115,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               console.log("User has tenant_id, redirecting to dashboard");
               navigate("/dashboard");
             }
-          } catch (err: any) {
+          } catch (err) {
             console.error("Error getting user profile:", err);
             setError(err.message);
             setIsAuthenticated(false);
@@ -150,7 +131,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               const userProfile = await authApi.getUserProfile(session.user.id);
               console.log("User updated, profile reloaded:", userProfile);
               setUser(userProfile);
-            } catch (err: any) {
+            } catch (err) {
               console.error("Error getting updated user profile:", err);
             }
           }
@@ -164,7 +145,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [navigate]);
 
   // Sign in function
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email, password) => {
     try {
       setIsLoading(true);
       setError(null);
@@ -173,7 +154,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await authApi.signIn(email, password);
       console.log("Sign in successful");
       // Auth state listener will handle the rest
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error signing in:", err);
       setError(err.message);
       throw err;
@@ -183,13 +164,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   // Sign up function
-  const signUp = async (
-    email: string,
-    password: string,
-    userData: Partial<UserProfile>,
-    tenantData?: any,
-    storeData?: any,
-  ) => {
+  const signUp = async (email, password, userData, tenantData, storeData) => {
     try {
       setIsLoading(true);
       setError(null);
@@ -211,7 +186,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       console.log("Sign up successful");
       // Auth state listener will handle the rest
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error signing up:", err);
       setError(err.message);
       throw err;
@@ -228,7 +203,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await authApi.signOut();
       console.log("Sign out successful");
       // Auth state listener will handle the rest
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error signing out:", err);
       setError(err.message);
       throw err;
@@ -238,7 +213,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   // Update profile function
-  const updateProfile = async (updates: Partial<UserProfile>) => {
+  const updateProfile = async (updates) => {
     try {
       if (!user) throw new Error("No user logged in");
 
@@ -247,7 +222,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const updatedProfile = await authApi.updateUserProfile(user.id, updates);
       console.log("Profile updated successfully");
       setUser(updatedProfile);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error updating profile:", err);
       setError(err.message);
       throw err;
@@ -257,13 +232,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   // Reset password function
-  const resetPassword = async (email: string) => {
+  const resetPassword = async (email) => {
     try {
       setIsLoading(true);
       console.log("Resetting password for:", email);
       await authApi.resetPassword(email);
       console.log("Password reset email sent");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error resetting password:", err);
       setError(err.message);
       throw err;
@@ -273,13 +248,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   // Update password function
-  const updatePassword = async (password: string) => {
+  const updatePassword = async (password) => {
     try {
       setIsLoading(true);
       console.log("Updating password");
       await authApi.updatePassword(password);
       console.log("Password updated successfully");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error updating password:", err);
       setError(err.message);
       throw err;
@@ -307,6 +282,3 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     </AuthContext.Provider>
   );
 };
-
-// Export types for use elsewhere
-export type { AuthContextType, UserProfile };

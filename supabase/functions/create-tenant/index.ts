@@ -200,7 +200,7 @@ serve(async (req) => {
         {
           id: userId,
           email,
-          full_name: userData.full_name,
+          full_name: userData.full_name || email.split("@")[0] || null,
           role: userData.role || "admin",
           tenant_id: tenant.id,
           store_id: store.id,

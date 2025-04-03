@@ -58,54 +58,96 @@ export const authApi = {
     password: string,
     userData: Partial<UserProfile>,
   ) => {
-    // For development, we'll use auto-confirm mode to avoid email verification
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: userData,
-        emailRedirectTo: `${window.location.origin}/login`,
-        // Disable email verification for development
-        emailConfirmationUrl: `${window.location.origin}/login?verified=true`,
-      },
-    });
+    try {
+      console.log("Starting user signup process for", email);
 
-    if (authError) throw authError;
+      // For development, we'll use auto-confirm mode to avoid email verification
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: userData.full_name || email.split("@")[0],
+            role: userData.role || "user",
+            tenant_id: userData.tenant_id,
+            store_id: userData.store_id,
+          },
+          emailRedirectTo: `${window.location.origin}/login`,
+          // Disable email verification for development
+          emailConfirmationUrl: `${window.location.origin}/login?verified=true`,
+        },
+      });
 
-    // Create user profile in the users table
-    if (authData.user) {
-      try {
-        // Create a minimal user profile with only required fields
-        const userProfileData = {
-          id: authData.user.id,
-          email: email,
-          full_name: userData.full_name || email.split("@")[0],
-          role: userData.role || "user",
-          is_active: true,
-        };
-
-        const { error: profileError } = await supabase
-          .from("users")
-          .insert([userProfileData]);
-
-        if (profileError) {
-          console.error("Error creating user profile:", profileError);
-          throw new Error(
-            profileError.message ||
-              "Failed to create user profile. Please try again later.",
-          );
-        }
-      } catch (err) {
-        console.error("Error creating user profile:", err);
-        throw new Error(
-          err instanceof Error
-            ? err.message
-            : "Failed to create user profile. Please try again later.",
-        );
+      if (authError) {
+        console.error("Auth signup error:", authError);
+        throw authError;
       }
-    }
 
-    return authData;
+      console.log("Auth user created successfully:", authData?.user?.id);
+
+      // Wait a moment to ensure the auth user is fully created and trigger runs
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      // Check if the user profile was created by the trigger
+      const { data: userProfile, error: profileCheckError } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", authData.user.id)
+        .single();
+
+      if (profileCheckError) {
+        console.log("User profile not found, creating manually");
+
+        // Manually create the user profile if trigger didn't work
+        try {
+          // Use upsert to avoid conflicts
+          const { error: upsertError } = await supabase.from("users").upsert(
+            [
+              {
+                id: authData.user.id,
+                email: email,
+                full_name: userData.full_name || email.split("@")[0],
+                role: userData.role || "user",
+                tenant_id: userData.tenant_id,
+                store_id: userData.store_id,
+                is_active: true,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              },
+            ],
+            { onConflict: "id" },
+          );
+
+          if (upsertError) {
+            console.error("Error creating user profile:", upsertError);
+
+            // Try direct insert as fallback with minimal fields
+            const { error: insertError } = await supabase.from("users").insert([
+              {
+                id: authData.user.id,
+                email: email,
+                full_name: userData.full_name || email.split("@")[0],
+                role: userData.role || "user",
+                is_active: true,
+              },
+            ]);
+
+            if (insertError) {
+              console.error("Fallback insert also failed:", insertError);
+            }
+          }
+        } catch (profileError) {
+          console.error("Error creating user profile:", profileError);
+        }
+      } else {
+        console.log("User profile created by trigger:", userProfile);
+      }
+
+      return authData;
+    } catch (error) {
+      console.error("Error in signUp:", error);
+      throw error;
+    }
   },
 
   /**
@@ -181,7 +223,31 @@ export const authApi = {
         if (userError) throw userError;
 
         if (userData.user && userData.user.id === userId) {
-          // Try to fix the user profile using the edge function
+          // Try to create the user profile directly
+          const userProfileData = {
+            id: userId,
+            email: userData.user.email || "",
+            full_name:
+              userData.user.user_metadata?.full_name ||
+              userData.user.email?.split("@")[0] ||
+              "",
+            role: userData.user.user_metadata?.role || "user",
+            tenant_id: userData.user.user_metadata?.tenant_id || null,
+            store_id: userData.user.user_metadata?.store_id || null,
+            is_active: true,
+          };
+
+          const { data: insertedData, error: insertError } = await supabase
+            .from("users")
+            .upsert([userProfileData])
+            .select()
+            .single();
+
+          if (!insertError && insertedData) {
+            return insertedData;
+          }
+
+          // If direct insert fails, try the edge function
           try {
             await supabase.functions.invoke("fix-user-auth", {
               body: { email: userData.user.email },
@@ -233,12 +299,12 @@ export const authApi = {
    */
   fixUserAuth: async (email: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke("fix-user-auth", {
-        body: { email },
-      });
+      // Try to use the local function instead of edge function
+      const { fixUserAuth } = await import("./fix-user-auth");
+      const result = await fixUserAuth(email);
 
-      if (error) throw error;
-      return data;
+      if (result.error) throw new Error(result.error);
+      return result;
     } catch (err) {
       console.error("Error fixing user auth:", err);
       throw err;
